@@ -10,7 +10,10 @@ JS, PHP, CSS, Node, etc.
 
 
 ## 📜 Licencia / Contacto
-elPrimo - Uso Gratuito
+elPrimo - Este proyecto se ofrece con una versión de uso gratuito,
+ideal para pequeñas empresas y técnicos independientes.
+Incluye funcionalidades esenciales sin costo.
+
 
 ## 🧠 Descripción
 
