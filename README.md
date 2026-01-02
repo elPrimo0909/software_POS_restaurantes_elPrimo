@@ -5,6 +5,13 @@
 
 <p align="center">
 
+## 🚀 Tecnologías
+JS, PHP, CSS, Node, etc.
+
+
+## 📜 Licencia / Contacto
+elPrimo - Uso Gratuito
+
 
 ## Funcionalidades
 - Factura Pos
