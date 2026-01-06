@@ -16,25 +16,28 @@ require_once ("../config/db.php");//Contiene las variables de configuracion para
 require_once ("../config/conexion.php");//Contiene funcion que conecta a la base de datos
 
 
-$perfil2    = mysqli_query($con, "select * from perfil limit 0,1");
-$rw_perfil2 = mysqli_fetch_array($perfil2);
+/* fetch perfil */
+$stmt = mysqli_prepare($con, "SELECT * FROM perfil LIMIT 1");
+mysqli_stmt_execute($stmt);
+$res = mysqli_stmt_get_result($stmt);
+$rw_perfil2 = mysqli_fetch_array($res);
+mysqli_stmt_close($stmt);
 
 
 
 $action = (isset($_REQUEST['action']) && $_REQUEST['action'] != NULL)?$_REQUEST['action']:'';
 if ($action == 'ajax') {
 	// escaping, additionally removing everything that could be (html/javascript-) code
-	$q        = mysqli_real_escape_string($con, (strip_tags($_REQUEST['q'], ENT_QUOTES)));
+	$q        = strip_tags($_REQUEST['q'], ENT_QUOTES);
+	$q_trim   = trim($q);
 	$aColumns = array('id', 'codigo', 'descripcion');//Columnas de busqueda
 	$sTable   = "lista7";
 	$sWhere   = "";
-	if ($_GET['q'] != "") {
-		$sWhere = "WHERE (";
-		for ($i = 0; $i < count($aColumns); $i++) {
-			$sWhere .= $aColumns[$i]." LIKE '%".$q."%' OR ";
-		}
-		$sWhere = substr_replace($sWhere, "", -3);
-		$sWhere .= ')';
+	$use_like = false;
+	if (!empty($q_trim)) {
+		$use_like = true;
+		$sWhere = "WHERE (".$aColumns[0]." LIKE ? OR ".$aColumns[1]." LIKE ? OR ".$aColumns[2]." LIKE ?)";
+		$like = "%".$q_trim."%";
 	}
 	include 'pagination.php';//include pagination file
 	//pagination variables
@@ -42,15 +45,39 @@ if ($action == 'ajax') {
 	$per_page  = 5;//how much records you want to show
 	$adjacents = 4;//gap between pages after number of adjacents
 	$offset    = ($page-1)*$per_page;
-	//Count the total number of row in your table*/
-	$count_query = mysqli_query($con, "SELECT count(*) AS numrows FROM $sTable  $sWhere ");
-	$row         = mysqli_fetch_array($count_query);
-	$numrows     = $row['numrows'];
+	//Count the total number of row in your table
+	if ($use_like) {
+		$stmt = mysqli_prepare($con, "SELECT count(*) AS numrows FROM $sTable $sWhere");
+		mysqli_stmt_bind_param($stmt, 'sss', $like, $like, $like);
+		mysqli_stmt_execute($stmt);
+		$res_count = mysqli_stmt_get_result($stmt);
+		$row = mysqli_fetch_array($res_count);
+		mysqli_stmt_close($stmt);
+		$numrows = $row['numrows'];
+	} else {
+		$stmt = mysqli_prepare($con, "SELECT count(*) AS numrows FROM $sTable");
+		mysqli_stmt_execute($stmt);
+		$res_count = mysqli_stmt_get_result($stmt);
+		$row = mysqli_fetch_array($res_count);
+		mysqli_stmt_close($stmt);
+		$numrows = $row['numrows'];
+	}
 	$total_pages = ceil($numrows/$per_page);
 	$reload      = './index.php';
 	//main query to fetch the data
-	$sql   = "SELECT * FROM  $sTable $sWhere ORDER by id DESC LIMIT $offset,$per_page";
-	$query = mysqli_query($con, $sql);
+	if ($use_like) {
+		$stmt = mysqli_prepare($con, "SELECT * FROM $sTable $sWhere ORDER BY id DESC LIMIT ?, ?");
+		mysqli_stmt_bind_param($stmt, 'sssii', $like, $like, $like, $offset, $per_page);
+		mysqli_stmt_execute($stmt);
+		$query = mysqli_stmt_get_result($stmt);
+		mysqli_stmt_close($stmt);
+	} else {
+		$stmt = mysqli_prepare($con, "SELECT * FROM $sTable ORDER BY id DESC LIMIT ?, ?");
+		mysqli_stmt_bind_param($stmt, 'ii', $offset, $per_page);
+		mysqli_stmt_execute($stmt);
+		$query = mysqli_stmt_get_result($stmt);
+		mysqli_stmt_close($stmt);
+	}
 	//loop through fetched data
 	if ($numrows > 0) {
 
@@ -87,16 +114,25 @@ if ($rw_perfil2['regimen']=="Comun") {
 <th style="width: 36px;"></th>
 </tr>
 		<?php while ($row = mysqli_fetch_array($query)) {
-			$id_producto       = $row['id'];
-			$codigo            = $row['codigo'];
-			$imp1            = $row['impuesto'];
-			$articulo          = $row['descripcion'];
-			$id_marca_producto = $row['id_marca_producto'];
-			$codigo_producto   = $row["codigo_producto"];
-			$sql_marca         = mysqli_query($con, "select nombre_marca from marcas where id_marca='$id_marca_producto'");
-			$rw_marca          = mysqli_fetch_array($sql_marca);
-			$nombre_marca      = $rw_marca['nombre_marca'];
-			$prec              = $row["precio_venta"];
+			$id_producto       = (int)$row['id'];
+			$codigo            = htmlspecialchars($row['codigo'], ENT_QUOTES, 'UTF-8');
+			$imp1              = (float)$row['impuesto'];
+			$articulo          = htmlspecialchars($row['descripcion'], ENT_QUOTES, 'UTF-8');
+			$id_marca_producto = isset($row['id_marca_producto']) ? (int)$row['id_marca_producto'] : 0;
+			$codigo_producto   = isset($row['codigo_producto']) ? htmlspecialchars($row['codigo_producto'], ENT_QUOTES, 'UTF-8') : '';
+			$nombre_marca      = '';
+			if ($id_marca_producto) {
+				$stmt_m = mysqli_prepare($con, "SELECT nombre_marca FROM marcas WHERE id_marca = ? LIMIT 1");
+				mysqli_stmt_bind_param($stmt_m, 'i', $id_marca_producto);
+				mysqli_stmt_execute($stmt_m);
+				$res_m = mysqli_stmt_get_result($stmt_m);
+				$rw_marca = mysqli_fetch_array($res_m);
+				if ($rw_marca) {
+					$nombre_marca = htmlspecialchars($rw_marca['nombre_marca'], ENT_QUOTES, 'UTF-8');
+				}
+				mysqli_stmt_close($stmt_m);
+			}
+			$prec = (float)$row['precio_venta'];
 
 
 

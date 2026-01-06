@@ -20,18 +20,31 @@ if (isset($_POST['articulo'])) {$articulo = $_POST['articulo'];}
 /* Connect To Database*/
 require_once ("../config/db.php");//Contiene las variables de configuracion para conectar a la base de datos
 require_once ("../config/conexion.php");//Contiene funcion que conecta a la base de datos
-$perfil2    = mysqli_query($con, "select * from perfil limit 0,1");
-$rw_perfil2 = mysqli_fetch_array($perfil2);
+/* fetch perfil */
+$stmt = mysqli_prepare($con, "SELECT * FROM perfil LIMIT 1");
+mysqli_stmt_execute($stmt);
+$res = mysqli_stmt_get_result($stmt);
+$rw_perfil2 = mysqli_fetch_array($res);
+mysqli_stmt_close($stmt);
 
 //GURDANDO DATOS POST EN LA DB
 
 if (!empty($id) and !empty($cantidad) and !empty($prec)) {
-	$insert_tmp = mysqli_query($con, "INSERT INTO ostemporal (id,titulo,come,celu,num,estado) VALUES ('$id','$articulo','$cantidad','$session_id','$prec','$codigo')");
+	$id_i = intval($id);
+	$cantidad_i = intval($cantidad);
+	$num_val = floatval($prec);
+	$stmt = mysqli_prepare($con, "INSERT INTO ostemporal (id,titulo,come,celu,num,estado) VALUES (?,?,?,?,?,?)");
+	mysqli_stmt_bind_param($stmt, 'isisds', $id_i, $articulo, $cantidad_i, $session_id, $num_val, $codigo);
+	mysqli_stmt_execute($stmt);
+	mysqli_stmt_close($stmt);
 }
-if (isset($_GET['id']))//codigo elimina un elemento del array
+if (isset($_GET['id'])) //codigo elimina un elemento del array
 {
-	$id     = intval($_GET['id']);
-	$delete = mysqli_query($con, "DELETE FROM ostemporal WHERE id='".$id."'");
+	$id_del = intval($_GET['id']);
+	$stmt = mysqli_prepare($con, "DELETE FROM ostemporal WHERE id = ?");
+	mysqli_stmt_bind_param($stmt, 'i', $id_del);
+	mysqli_stmt_execute($stmt);
+	mysqli_stmt_close($stmt);
 }
 
 ///TESTING pasar id correctamente
@@ -53,8 +66,11 @@ $sumador_total = 0;
 ///testing/////echo $session_id;
 ///CONSULTA UTILIZANDO LA SESSION
 
-$sql = mysqli_query($con, "select * from ostemporal where celu ='".$session_id."'");
-while ($row = mysqli_fetch_array($sql))
+$stmt = mysqli_prepare($con, "SELECT * FROM ostemporal WHERE celu = ?");
+mysqli_stmt_bind_param($stmt, 's', $session_id);
+mysqli_stmt_execute($stmt);
+$res = mysqli_stmt_get_result($stmt);
+while ($row = mysqli_fetch_array($res))
 
 /*
 $sql=mysqli_query($con, "select * from lista7 where id ='".$_POST['id']."'");

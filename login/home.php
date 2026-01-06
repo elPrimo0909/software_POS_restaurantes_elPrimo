@@ -98,7 +98,7 @@
                     <th scope="col">Contact Number</th>
                     <th scope="col">Email</th>
                     <th scope="col">Username</th>
-                    <th scope="col">Password</th>
+                    <!-- Password hashes are not displayed for security -->
                     <th scope="col">Action</th>
                     </tr>
                 </thead>
@@ -118,7 +118,8 @@
                             $contactNumber = $row['contact_number'];
                             $email = $row['email'];
                             $username = $row['username'];
-                            $password = $row['password'];
+                            // Do not expose password hashes in the UI
+                            $password = null;
 
                         ?>
 
@@ -129,7 +130,7 @@
                             <td id="contactNumber-<?= $userID ?>"><?php echo $contactNumber ?></td>
                             <td id="email-<?= $userID ?>"><?php echo $email ?></td>
                             <td id="username-<?= $userID ?>"><?php echo $username ?></td>
-                            <td id="password-<?= $userID ?>"><?php echo $password ?></td>
+                            <!-- password hidden -->
                             <td>
                                 <button id="editBtn" onclick="update_user(<?php echo $userID ?>)" title="Edit">&#9998;</button>
                                 <button id="deleteBtn" onclick="delete_user(<?php echo $userID ?>)">&#128465;</button>
@@ -156,7 +157,8 @@
             let updateContactNumber = $("#contactNumber-" + id).text();
             let updateEmail = $("#email-" + id).text();
             let updateUsername = $("#username-" + id).text();
-            let updatePassword = $("#password-" + id).text();
+            // Do not prefill password. Leave empty to keep existing password.
+            let updatePassword = '';
 
             console.log(updateFirstName);
             console.log(updateLastName);
@@ -167,7 +169,7 @@
             $("#updateContactNumber").val(updateContactNumber);
             $("#updateEmail").val(updateEmail);
             $("#updateUsername").val(updateUsername);
-            $("#updatePassword").val(updatePassword);
+            $("#updatePassword").val('');
 
         }
 

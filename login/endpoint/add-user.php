@@ -8,6 +8,9 @@ $email = $_POST['email'];
 $username = $_POST['username'];
 $password = $_POST['password'];
 
+// Hash the password before storing
+$passwordHash = password_hash($password, PASSWORD_DEFAULT);
+
 
 try {
     $stmt = $conn->prepare("SELECT `first_name`, `last_name` FROM `tbl_user` WHERE `first_name` = :first_name AND `last_name` = :last_name");
@@ -26,7 +29,7 @@ try {
         $insertStmt->bindParam(':contact_number', $contactNumber, PDO::PARAM_INT);
         $insertStmt->bindParam(':email', $email, PDO::PARAM_STR);
         $insertStmt->bindParam(':username', $username, PDO::PARAM_STR);
-        $insertStmt->bindParam(':password', $password, PDO::PARAM_STR);
+        $insertStmt->bindParam(':password', $passwordHash, PDO::PARAM_STR);
         $insertStmt->execute();
 
 

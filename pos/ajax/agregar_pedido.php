@@ -7,12 +7,12 @@
 Autor: Adrian Monsalve
 ---------------------------*/
 session_start();
-$session_id                               = session_id();
-if (isset($_POST['id'])) {$id             = $_POST['id'];}
-if (isset($_POST['cantidad'])) {$cantidad = $_POST['cantidad'];}
-if (isset($_POST['codigo'])) {$codigo     = $_POST['codigo'];}
-if (isset($_POST['prec'])) {$prec         = $_POST['prec'];}
-if (isset($_POST['articulo'])) {$articulo = $_POST['articulo'];}
+$session_id = session_id();
+$id = isset($_POST['id']) ? intval($_POST['id']) : null;
+$cantidad = isset($_POST['cantidad']) ? intval($_POST['cantidad']) : null;
+$codigo = isset($_POST['codigo']) ? trim($_POST['codigo']) : '';
+$prec = isset($_POST['prec']) ? floatval($_POST['prec']) : 0.0;
+$articulo = isset($_POST['articulo']) ? trim($_POST['articulo']) : '';
 
 /// testing recogida POST
 //echo $_POST['id'];
@@ -24,12 +24,21 @@ require_once ("../config/conexion.php");//Contiene funcion que conecta a la base
 //GURDANDO DATOS POST EN LA DB
 
 if (!empty($id) and !empty($cantidad) and !empty($prec)) {
-	$insert_tmp = mysqli_query($con, "INSERT INTO ostemporal (id,titulo,come,celu,num,estado) VALUES ('$id','$articulo','$cantidad','$session_id','$prec','$codigo')");
+	$id_i = intval($id);
+	$cantidad_i = intval($cantidad);
+	$num_val = floatval($prec);
+	$stmt = mysqli_prepare($con, "INSERT INTO ostemporal (id,titulo,come,celu,num,estado) VALUES (?,?,?,?,?,?)");
+	mysqli_stmt_bind_param($stmt, 'isidss', $id_i, $articulo, $cantidad_i, $session_id, $num_val, $codigo);
+	mysqli_stmt_execute($stmt);
+	mysqli_stmt_close($stmt);
 }
-if (isset($_GET['id']))//codigo elimina un elemento del array
+if (isset($_GET['id'])) //codigo elimina un elemento del array
 {
-	$id     = intval($_GET['id']);
-	$delete = mysqli_query($con, "DELETE FROM ostemporal WHERE id='".$id."'");
+	$id_del = intval($_GET['id']);
+	$stmt = mysqli_prepare($con, "DELETE FROM ostemporal WHERE id = ?");
+	mysqli_stmt_bind_param($stmt, 'i', $id_del);
+	mysqli_stmt_execute($stmt);
+	mysqli_stmt_close($stmt);
 }
 
 ///TESTING pasar id correctamente
@@ -46,13 +55,18 @@ if (isset($_GET['id']))//codigo elimina un elemento del array
 	<th></th>
 </tr>
 <?php
-$sumador_total = 0;
+ $sumador_total = 0;
+ $suma = 0;
 
 ///testing/////echo $session_id;
 ///CONSULTA UTILIZANDO LA SESSION
 
-$sql = mysqli_query($con, "select * from ostemporal where celu ='".$session_id."'");
-while ($row = mysqli_fetch_array($sql))
+/* Use prepared statement to fetch session items */
+$stmt = mysqli_prepare($con, "SELECT * FROM ostemporal WHERE celu = ?");
+mysqli_stmt_bind_param($stmt, 's', $session_id);
+mysqli_stmt_execute($stmt);
+$res = mysqli_stmt_get_result($stmt);
+while ($row = mysqli_fetch_array($res))
 
 /*
 $sql=mysqli_query($con, "select * from lista7 where id ='".$_POST['id']."'");
@@ -85,16 +99,16 @@ while ($row=mysqli_fetch_array($sql))
 
 	?>
 											<tr>
-												<td class="visible-md visible-lg" ><?php echo $codigo_producto;?></td>
-												<td><?php echo $cantidad;?></td>
-												<td><?php echo $nombre_producto.$marca_producto;?></td>
+												<td class="visible-md visible-lg" ><?php echo htmlspecialchars($codigo_producto, ENT_QUOTES, 'UTF-8');?></td>
+												<td><?php echo intval($cantidad);?></td>
+												<td><?php echo htmlspecialchars($nombre_producto . $marca_producto, ENT_QUOTES, 'UTF-8');?></td>
 												<td><span class="pull-right"><?php
 
 	echo "$";
 
 	echo number_format($precio);?></span></td>
-												<td class="visible-md visible-lg" ><span class="pull-right"><?echo "$"?><?php echo number_format($subto);?></span></td>
-												<td ><span class="pull-right"><a href="#" onclick="eliminar('<?php echo $id_tmp?>')"><i class="glyphicon glyphicon-trash"></i></a></span></td>
+												<td class="visible-md visible-lg" ><span class="pull-right"><?php echo "$" . number_format($subto);?></span></td>
+												<td ><span class="pull-right"><a href="#" onclick="eliminar('<?php echo htmlspecialchars($id_tmp, ENT_QUOTES, 'UTF-8');?>')"><i class="glyphicon glyphicon-trash"></i></a></span></td>
 											</tr>
 	<?php
 }

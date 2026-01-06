@@ -7,7 +7,7 @@ $updateLastName = $_POST['last_name'];
 $updateContactNumber = $_POST['contact_number'];
 $updateEmail = $_POST['email'];
 $updateUsername = $_POST['username'];
-$updatePassword = $_POST['password'];
+$updatePassword = isset($_POST['password']) ? $_POST['password'] : '';
 
 try {
     $stmt = $conn->prepare("SELECT `first_name`, `last_name` FROM `tbl_user` WHERE `first_name` = :first_name AND `last_name` = :last_name");
@@ -20,13 +20,19 @@ try {
     if (empty($nameExist)) {
         $conn->beginTransaction();
 
-        $updateStmt = $conn->prepare("UPDATE `tbl_user` SET `first_name` = :first_name, `last_name` = :last_name, `contact_number` = :contact_number, `email` = :email, `username` = :username, `password` = :password WHERE `tbl_user_id` = :userID");
+        // If password provided, hash it and include in update; otherwise keep existing password
+        if (strlen(trim($updatePassword)) > 0) {
+            $passwordHash = password_hash($updatePassword, PASSWORD_DEFAULT);
+            $updateStmt = $conn->prepare("UPDATE `tbl_user` SET `first_name` = :first_name, `last_name` = :last_name, `contact_number` = :contact_number, `email` = :email, `username` = :username, `password` = :password WHERE `tbl_user_id` = :userID");
+            $updateStmt->bindParam(':password', $passwordHash, PDO::PARAM_STR);
+        } else {
+            $updateStmt = $conn->prepare("UPDATE `tbl_user` SET `first_name` = :first_name, `last_name` = :last_name, `contact_number` = :contact_number, `email` = :email, `username` = :username WHERE `tbl_user_id` = :userID");
+        }
         $updateStmt->bindParam(':first_name', $updateFirstName, PDO::PARAM_STR);
         $updateStmt->bindParam(':last_name', $updateLastName, PDO::PARAM_STR);
         $updateStmt->bindParam(':contact_number', $updateContactNumber, PDO::PARAM_INT);
         $updateStmt->bindParam(':email', $updateEmail, PDO::PARAM_STR);
         $updateStmt->bindParam(':username', $updateUsername, PDO::PARAM_STR);
-        $updateStmt->bindParam(':password', $updatePassword, PDO::PARAM_STR);
         $updateStmt->bindParam(':userID', $updateUserID, PDO::PARAM_INT);
         $updateStmt->execute();
 

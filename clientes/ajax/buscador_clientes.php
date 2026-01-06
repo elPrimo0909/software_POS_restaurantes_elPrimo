@@ -27,18 +27,16 @@ $rw_perfil2 = mysqli_fetch_array($perfil2);
 
 $action = (isset($_REQUEST['action']) && $_REQUEST['action'] != NULL)?$_REQUEST['action']:'';
 if ($action == 'ajax') {
-	// escaping, additionally removing everything that could be (html/javascript-) code
-	$q        = mysqli_real_escape_string($con, (strip_tags($_REQUEST['q'], ENT_QUOTES)));
-	$aColumns = array('id', 'empresa', 'identificacion');//Columnas de busqueda
+	// escaping and prepare for LIKE search
+	$q        = trim(strip_tags($_REQUEST['q'] ?? ''));
 	$sTable   = "clientes2";
 	$sWhere   = "";
-	if ($_GET['q'] != "") {
-		$sWhere = "WHERE (";
-		for ($i = 0; $i < count($aColumns); $i++) {
-			$sWhere .= $aColumns[$i]." LIKE '%".$q."%' OR ";
-		}
-		$sWhere = substr_replace($sWhere, "", -3);
-		$sWhere .= ')';
+	$params = [];
+	if ($q !== "") {
+		// use prepared statements with three LIKE placeholders (id as string fallback)
+		$like = "%" . $q . "%";
+		$sWhere = "WHERE (id LIKE ? OR empresa LIKE ? OR identificacion LIKE ? )";
+		$params = [$like, $like, $like];
 	}
 	include 'pagination.php';//include pagination file
 	//pagination variables
@@ -47,14 +45,39 @@ if ($action == 'ajax') {
 	$adjacents = 4;//gap between pages after number of adjacents
 	$offset    = ($page-1)*$per_page;
 	//Count the total number of row in your table*/
-	$count_query = mysqli_query($con, "SELECT count(*) AS numrows FROM $sTable  $sWhere ");
-	$row         = mysqli_fetch_array($count_query);
-	$numrows     = $row['numrows'];
+	// prepare count query
+	if ($sWhere === "") {
+		$count_sql = "SELECT count(*) AS numrows FROM $sTable";
+		$count_stmt = mysqli_prepare($con, $count_sql);
+		mysqli_stmt_execute($count_stmt);
+		$count_res = mysqli_stmt_get_result($count_stmt);
+		$row = mysqli_fetch_array($count_res);
+		$numrows = $row['numrows'];
+		mysqli_stmt_close($count_stmt);
+	} else {
+		$count_sql = "SELECT count(*) AS numrows FROM $sTable $sWhere";
+		$count_stmt = mysqli_prepare($con, $count_sql);
+		mysqli_stmt_bind_param($count_stmt, 'sss', $params[0], $params[1], $params[2]);
+		mysqli_stmt_execute($count_stmt);
+		$count_res = mysqli_stmt_get_result($count_stmt);
+		$row = mysqli_fetch_array($count_res);
+		$numrows = $row['numrows'];
+		mysqli_stmt_close($count_stmt);
+	}
 	$total_pages = ceil($numrows/$per_page);
 	$reload      = './index.php';
 	//main query to fetch the data
-	$sql   = "SELECT * FROM  $sTable $sWhere ORDER by id DESC LIMIT $offset,$per_page";
-	$query = mysqli_query($con, $sql);
+	// fetch results with prepared statement and pagination
+	$sql = "SELECT * FROM $sTable " . ($sWhere ? $sWhere : '') . " ORDER by id DESC LIMIT ?, ?";
+	$stmt = mysqli_prepare($con, $sql);
+	if ($sWhere === "") {
+		mysqli_stmt_bind_param($stmt, 'ii', $offset, $per_page);
+	} else {
+		// bind three like params plus offset and limit
+		mysqli_stmt_bind_param($stmt, 'sssii', $params[0], $params[1], $params[2], $offset, $per_page);
+	}
+	mysqli_stmt_execute($stmt);
+	$query = mysqli_stmt_get_result($stmt);
 	//loop through fetched data
 	if ($numrows > 0) {
 

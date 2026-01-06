@@ -14,22 +14,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $row = $stmt->fetch();
         $stored_password = $row['password'];
 
-        if ($password === $stored_password) {
-            $_SESSION["user"] = $username; 
-            ///$_SESSION["nivel"] = $nivel; 
-            echo "
-            <script>
-                /*alert('Login Successfully!');*/
-                window.location.href = 'http://localhost/SM-RESTAURANTES/pos/';
-            </script>
-            "; 
+        // Verify password using password_verify. Support legacy plaintext by upgrading hash on first login.
+        if (password_verify($password, $stored_password)) {
+            $_SESSION["user"] = $username;
+            echo "<script>window.location.href = 'http://localhost/SM-RESTAURANTES/pos/';</script>";
+        } elseif ($password === $stored_password) {
+            // Legacy: stored password is plaintext. Re-hash and update DB.
+            $newHash = password_hash($password, PASSWORD_DEFAULT);
+            $upd = $conn->prepare("UPDATE `tbl_user` SET `password` = :ph WHERE `username` = :username");
+            $upd->execute([':ph' => $newHash, ':username' => $username]);
+            $_SESSION["user"] = $username;
+            echo "<script>window.location.href = 'http://localhost/SM-RESTAURANTES/pos/';</script>";
         } else {
-            echo "
-            <script>
-                /*alert('Login Failed, Incorrect Password!');*/
-                window.location.href = 'http://localhost/SM-RESTAURANTES/login/';
-            </script>
-            ";
+            echo "<script>window.location.href = 'http://localhost/SM-RESTAURANTES/login/';</script>";
         }
     } else {
         echo "
