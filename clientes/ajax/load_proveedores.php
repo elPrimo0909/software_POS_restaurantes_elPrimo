@@ -2,14 +2,22 @@
 // connect to database
 include ("../config/db.php");
 $con    = @mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-$search = strip_tags(trim($_GET['q']));
-// Do Prepared Query
-$query = mysqli_query($con, "SELECT * FROM clientes2 WHERE empresa LIKE '%$search%' LIMIT 40");
-// Do a quick fetchall on the results
-$list = array();
-while ($list = mysqli_fetch_array($query)) {
-	$data[] = array('id' => $list['id'], 'text' => $list['empresa']);
+$search = isset($_GET['q']) ? strip_tags(trim($_GET['q'])) : '';
+$data = array();
+if ($search !== '') {
+	$like = "%" . $search . "%";
+	$stmt = mysqli_prepare($con, "SELECT id, empresa FROM clientes2 WHERE empresa LIKE ? LIMIT 40");
+	if ($stmt) {
+		mysqli_stmt_bind_param($stmt, 's', $like);
+		mysqli_stmt_execute($stmt);
+		$res = mysqli_stmt_get_result($stmt);
+		while ($row = mysqli_fetch_assoc($res)) {
+			$data[] = array('id' => (int)$row['id'], 'text' => htmlspecialchars($row['empresa'], ENT_QUOTES, 'UTF-8'));
+		}
+		mysqli_stmt_close($stmt);
+	}
 }
 // return the result in json
-echo json_encode($data);
+header('Content-Type: application/json; charset=UTF-8');
+echo json_encode($data, JSON_UNESCAPED_UNICODE);
 ?>
