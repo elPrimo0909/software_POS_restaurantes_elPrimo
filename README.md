@@ -5,17 +5,17 @@
 
 <p align="center">
 
-## 🚀 Tecnologías
+##  Tecnologías
 JS, PHP, CSS, Node, etc.
 
 
-## 📜 Licencia / Contacto
+## Licencia / Contacto
 elPrimo - Este proyecto se ofrece con una versión de uso gratuito,
 ideal para pequeñas empresas y técnicos independientes.
 Incluye funcionalidades esenciales sin costo.
 
 
-## 🧠 Descripción
+##  Descripción
 
 Este software POS permite:
 - Registrar y administrar productos
@@ -23,7 +23,7 @@ Este software POS permite:
 - Gestionar clientes
 - Ver reportes simples de ventas
 
-👉 Ideal para pequeños negocios o restaurantes que necesitan un sistema fácil y ligero.
+ Ideal para pequeños negocios o restaurantes que necesitan un sistema fácil y ligero.
 
 
 ## Funcionalidades
